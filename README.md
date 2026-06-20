@@ -4,6 +4,7 @@
 # ClarityReply
 
 </div>
+
 Built by **Tejasvi Bajaj** for **Anakin Blitz**, a **6-hour hackathon**.
 
 ClarityReply is a Django-based AI reply workspace that extracts social post context from URLs or screenshots and generates platform-aware reply variations. It is designed for people who need to respond quickly across social platforms without sounding generic, robotic, or out of place.
