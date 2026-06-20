@@ -44,6 +44,7 @@
     cacheElements();
     bindEvents();
     updateSliders();
+    updatePlatformAvailability();
     autosizeTextareas();
   });
 
@@ -165,6 +166,7 @@
     els.methodPanels.forEach(function (panel) {
       panel.classList.toggle("is-active", panel.dataset.panel === method);
     });
+    updatePlatformAvailability();
   }
 
   function bindRadioGroup(buttons, onChange) {
@@ -224,6 +226,9 @@
 
   function setPlatform(platform, applyDefaults) {
     platform = normalizePlatform(platform);
+    if (state.method === "url" && isConversationPlatform(platform)) {
+      platform = "linkedin";
+    }
     state.selectedPlatform = platform;
     els.platformField.value = platform;
     els.platformChips.forEach(function (button) {
@@ -240,6 +245,17 @@
 
   function isConversationPlatform(platform) {
     return platform === "discord" || platform === "whatsapp";
+  }
+
+  function updatePlatformAvailability() {
+    var allowConversationPlatforms = state.method === "screenshot";
+    els.platformChips.forEach(function (button) {
+      var isConversationChip = isConversationPlatform(button.dataset.platform);
+      button.hidden = isConversationChip && !allowConversationPlatforms;
+    });
+    if (!allowConversationPlatforms && isConversationPlatform(state.selectedPlatform)) {
+      setPlatform("linkedin", true);
+    }
   }
 
   function updateConversationContextVisibility(platform) {
