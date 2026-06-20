@@ -1,0 +1,275 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#09090B">
+    <meta name="description" content="Generate platform-aware AI replies for social media in seconds.">
+    <title>ClarityReply</title>
+    <link rel="preconnect" href="/">
+    <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+    <script defer src="{% static 'core/js/app.js' %}"></script>
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="topbar" aria-label="Primary">
+        <a class="brand" href="#top" aria-label="ClarityReply home">
+          <span class="brand-mark" aria-hidden="true">C</span>
+          <span>ClarityReply</span>
+        </a>
+        <a class="topbar-action" href="#generator">Generate Reply</a>
+      </header>
+
+      <main id="top">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-content">
+            <p class="eyebrow">AI reply engine for every social platform</p>
+            <h1 id="hero-title">Write Better Replies in Seconds</h1>
+            <p class="hero-copy">Generate platform-aware AI replies for LinkedIn, X, Instagram, Reddit, YouTube and more.</p>
+            <a class="hero-cta" href="#generator">
+              <span>Generate Reply</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6"></path>
+              </svg>
+            </a>
+          </div>
+          <div class="hero-preview" aria-hidden="true">
+            <div class="preview-bar">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="preview-content">
+              <div class="preview-line is-wide"></div>
+              <div class="preview-line"></div>
+              <div class="preview-stack">
+                <div></div>
+                <div></div>
+                <div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="generator" class="app-section" aria-labelledby="app-title">
+          <div class="app-card">
+            <div class="app-card-header">
+              <div>
+                <p class="section-kicker">Reply Workspace</p>
+                <h2 id="app-title">Create a reply that sounds right where it lands.</h2>
+              </div>
+              <div class="status-pill" id="status-pill">Ready</div>
+            </div>
+
+            <div class="progress-rail" aria-hidden="true">
+              <span class="progress-dot is-active" data-progress-dot="input"></span>
+              <span class="progress-line"></span>
+              <span class="progress-dot" data-progress-dot="edit"></span>
+              <span class="progress-line"></span>
+              <span class="progress-dot" data-progress-dot="results"></span>
+            </div>
+
+            <form id="reply-form" novalidate>
+              <section class="panel is-visible" aria-labelledby="input-title">
+                <div class="panel-heading">
+                  <span class="step-number">01</span>
+                  <div>
+                    <h3 id="input-title">Choose your source</h3>
+                  </div>
+                </div>
+
+                <div class="segmented-control" role="tablist" aria-label="Input method">
+                  <button class="segment is-active" type="button" role="tab" aria-selected="true" data-method="url">URL</button>
+                  <button class="segment" type="button" role="tab" aria-selected="false" data-method="screenshot">Screenshot</button>
+                  <button class="segment" type="button" role="tab" aria-selected="false" data-method="manual">Manual</button>
+                </div>
+
+                <div class="method-panels">
+                  <div class="method-panel is-active" data-panel="url">
+                    <label class="field-label" for="source-url">Social post URL</label>
+                    <div class="input-row">
+                      <input id="source-url" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://linkedin.com/posts/..." spellcheck="false">
+                      <button class="secondary-button" type="button" id="extract-url-btn">
+                        <span class="button-label">Extract Content</span>
+                        <span class="button-spinner" aria-hidden="true"></span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="method-panel" data-panel="screenshot">
+                    <input id="screenshot-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+                    <button class="upload-zone" id="upload-zone" type="button" aria-label="Upload screenshot">
+                      <span class="upload-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                          <path d="M12 16V4m0 0 5 5m-5-5L7 9"></path>
+                          <path d="M20 16.5V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.5"></path>
+                        </svg>
+                      </span>
+                      <span class="upload-title">Drop a screenshot here</span>
+                      <span class="upload-copy">PNG, JPG, WEBP, or GIF</span>
+                    </button>
+                    <div class="image-preview" id="image-preview" hidden>
+                      <img id="preview-image" alt="Uploaded screenshot preview">
+                      <button type="button" class="icon-button" id="remove-image-btn" aria-label="Remove screenshot">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M18 6 6 18M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <button class="secondary-button full-width" type="button" id="extract-image-btn">
+                      <span class="button-label">Extract Content</span>
+                      <span class="button-spinner" aria-hidden="true"></span>
+                    </button>
+                  </div>
+
+                  <div class="method-panel" data-panel="manual">
+                    <div class="field-topline">
+                      <label class="field-label" for="manual-content">Post content</label>
+                      <span class="counter" id="manual-counter">0 characters</span>
+                    </div>
+                    <textarea id="manual-content" rows="5" placeholder="Paste the post, comment, thread, or conversation you want to reply to."></textarea>
+                    <button class="secondary-button full-width" type="button" id="manual-continue-btn">Continue to Settings</button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel platform-editor" id="editor-panel" aria-labelledby="editor-title" hidden>
+                <div class="panel-heading">
+                  <span class="step-number">02</span>
+                  <div>
+                    <h3 id="editor-title">Platform data editor</h3>
+                  </div>
+                </div>
+
+                <div class="editor-grid">
+                  <label class="field-card">
+                    <span>Platform</span>
+                    <input id="field-platform" name="platform" type="text" placeholder="linkedin">
+                  </label>
+                  <label class="field-card">
+                    <span>Author Name</span>
+                    <input id="field-author-name" name="author_name" type="text" placeholder="Alex Chen">
+                  </label>
+                  <label class="field-card">
+                    <span>Author Username</span>
+                    <input id="field-author-username" name="author_username" type="text" placeholder="@alexchen">
+                  </label>
+                  <label class="field-card wide">
+                    <span>Title</span>
+                    <input id="field-title" name="title" type="text" placeholder="Post title or topic">
+                  </label>
+                  <label class="field-card wide">
+                    <span>Summary</span>
+                    <textarea id="field-summary" name="summary" rows="3" placeholder="Concise summary"></textarea>
+                  </label>
+                  <label class="field-card wide">
+                    <span>Content</span>
+                    <textarea id="field-content" name="content" rows="6" placeholder="Extracted post content"></textarea>
+                  </label>
+                </div>
+              </section>
+
+              <section class="panel settings-panel" id="settings-panel" aria-labelledby="settings-title" hidden>
+                <div class="panel-heading">
+                  <span class="step-number">03</span>
+                  <div>
+                    <h3 id="settings-title">Reply settings</h3>
+                  </div>
+                </div>
+
+                <div class="settings-grid">
+                  <div class="setting-block wide">
+                    <div class="setting-title-row">
+                      <div>
+                        <h4>Platform</h4>
+                      </div>
+                    </div>
+                    <div class="chip-grid" id="platform-chips" role="radiogroup" aria-label="Platform">
+                      <button type="button" class="chip is-selected" data-platform="linkedin" role="radio" aria-checked="true">LinkedIn</button>
+                      <button type="button" class="chip" data-platform="twitter" role="radio" aria-checked="false">Twitter</button>
+                      <button type="button" class="chip" data-platform="instagram" role="radio" aria-checked="false">Instagram</button>
+                      <button type="button" class="chip" data-platform="youtube" role="radio" aria-checked="false">YouTube</button>
+                      <button type="button" class="chip" data-platform="reddit" role="radio" aria-checked="false">Reddit</button>
+                      <button type="button" class="chip" data-platform="facebook" role="radio" aria-checked="false">Facebook</button>
+                      <button type="button" class="chip" data-platform="producthunt" role="radio" aria-checked="false">ProductHunt</button>
+                      <button type="button" class="chip" data-platform="hackernews" role="radio" aria-checked="false">HackerNews</button>
+                      <button type="button" class="chip" data-platform="custom" role="radio" aria-checked="false">Custom</button>
+                    </div>
+                  </div>
+
+                  <div class="setting-block">
+                    <div class="setting-title-row">
+                      <h4>Reply Style</h4>
+                    </div>
+                    <div class="mini-segments" id="style-segments" role="radiogroup" aria-label="Reply style">
+                      <button type="button" class="is-active" data-value="professional" role="radio" aria-checked="true">Professional</button>
+                      <button type="button" data-value="friendly" role="radio" aria-checked="false">Friendly</button>
+                      <button type="button" data-value="engaging" role="radio" aria-checked="false">Engaging</button>
+                    </div>
+                  </div>
+
+                  <div class="setting-block">
+                    <div class="setting-title-row">
+                      <h4>Reply Length</h4>
+                    </div>
+                    <div class="mini-segments" id="length-segments" role="radiogroup" aria-label="Reply length">
+                      <button type="button" data-value="short" role="radio" aria-checked="false">Short</button>
+                      <button type="button" class="is-active" data-value="medium" role="radio" aria-checked="true">Medium</button>
+                      <button type="button" data-value="long" role="radio" aria-checked="false">Long</button>
+                    </div>
+                  </div>
+
+                  <div class="setting-block slider-block">
+                    <div class="setting-title-row">
+                      <div>
+                        <h4>Emoji Level</h4>
+                        <p>Professional <span aria-hidden="true">-></span> Fun</p>
+                      </div>
+                      <output id="emoji-output" for="emoji-level">35</output>
+                    </div>
+                    <input class="premium-slider" id="emoji-level" type="range" min="0" max="100" value="35">
+                  </div>
+
+                  <div class="setting-block slider-block">
+                    <div class="setting-title-row">
+                      <div>
+                        <h4>Creativity Level</h4>
+                        <p>Conservative <span aria-hidden="true">-></span> Creative</p>
+                      </div>
+                      <output id="creativity-output" for="creativity-level">58</output>
+                    </div>
+                    <input class="premium-slider" id="creativity-level" type="range" min="0" max="100" value="58">
+                  </div>
+                </div>
+
+                <button class="generate-button" type="submit" id="generate-btn">
+                  <span class="button-shine" aria-hidden="true"></span>
+                  <span class="button-label">Generate AI Replies</span>
+                  <span class="button-spinner" aria-hidden="true"></span>
+                </button>
+              </section>
+            </form>
+
+            <section class="results-section" id="results-section" aria-labelledby="results-title" hidden>
+              <div class="panel-heading">
+                  <span class="step-number">04</span>
+                  <div>
+                    <h3 id="results-title">Generated replies</h3>
+                  </div>
+                </div>
+
+              <div class="skeleton-grid" id="skeleton-grid" hidden>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+              </div>
+
+              <div class="results-grid" id="results-grid"></div>
+            </section>
+
+            <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
