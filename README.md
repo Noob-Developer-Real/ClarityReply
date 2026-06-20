@@ -15,8 +15,8 @@ ClarityReply is a Django-based AI reply workspace that extracts social post cont
 ![Django](https://img.shields.io/badge/Django-5.x-092E20?style=for-the-badge&logo=django&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![Anakin Blitz](https://img.shields.io/badge/Anakin%20Blitz-6%20Hour%20Hackathon-7C3AED?style=for-the-badge)
-[![Watch Demo](https://img.shields.io/badge/▶%20Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/rgVUMTHk-vA)
-[![Twitter Post](https://img.shields.io/badge/View%20Twitter%20Post-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/i/status/2061200836987159025)
+[![Watch Demo](https://img.shields.io/badge/▶%20Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)]([https://youtu.be/rgVUMTHk-vA](https://youtu.be/h6WDwGpDtp0?si=BuhNiZysEvRgAOTA))
+[![Twitter Post](https://img.shields.io/badge/View%20Twitter%20Post-000000?style=for-the-badge&logo=x&logoColor=white)]([https://x.com/i/status/2061200836987159025](https://x.com/i/status/2068350882811654201))
 
 ## Problem Statement
 
@@ -220,42 +220,6 @@ Run checks:
 python3 manage.py check
 python3 -m compileall core
 ```
-
-## Screenshots
-
-<table>
-  <tr>
-    <td align="center"><b>Desktop</b></td>
-    <td align="center"><b>Mobile</b></td>
-  </tr>
-  <tr>
-    <td><img src="./images/hero.jpg" width="100%"></td>
-    <td><img src="./images/mob-hero.jpg" width="100%"></td>
-  </tr>
-  <tr>
-    <td><img src="./images/crop.jpg" width="100%"></td>
-    <td><img src="./images/mob-crop.jpg" width="100%"></td>
-  </tr>
-  <tr>
-    <td><img src="./images/upload.jpg" width="100%"></td>
-    <td><img src="./images/mob-upload.jpg" width="100%"></td>
-  </tr>
-  <tr>
-    <td><img src="./images/result-1.jpg" width="100%"></td>
-    <td><img src="./images/mod-result-1.jpg" width="100%"></td>
-  </tr>
-  <tr>
-    <td><img src="./images/result-2.jpg" width="100%"></td>
-    <td><img src="./images/mob-result-2.jpg" width="100%"></td>
-  </tr>
-  <tr>
-    <td><img src="./images/result-3.jpg" width="100%"></td>
-    <td><img src="./images/mob-result-3.jpg" width="100%"></td>
-  </tr>
-  <tr>
-    <td><img src="./images/result-4.jpg" width="100%"></td>
-  </tr>
-</table>
 
 ## Future Roadmap
 
