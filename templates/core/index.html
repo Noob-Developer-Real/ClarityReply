@@ -80,7 +80,6 @@
                 <div class="segmented-control" role="tablist" aria-label="Input method">
                   <button class="segment is-active" type="button" role="tab" aria-selected="true" data-method="url">URL</button>
                   <button class="segment" type="button" role="tab" aria-selected="false" data-method="screenshot">Screenshot</button>
-                  <button class="segment" type="button" role="tab" aria-selected="false" data-method="manual">Manual</button>
                 </div>
 
                 <div class="method-panels">
@@ -121,14 +120,6 @@
                     </button>
                   </div>
 
-                  <div class="method-panel" data-panel="manual">
-                    <div class="field-topline">
-                      <label class="field-label" for="manual-content">Post content</label>
-                      <span class="counter" id="manual-counter">0 characters</span>
-                    </div>
-                    <textarea id="manual-content" rows="5" placeholder="Paste the post, comment, thread, or conversation you want to reply to."></textarea>
-                    <button class="secondary-button full-width" type="button" id="manual-continue-btn">Continue to Settings</button>
-                  </div>
                 </div>
               </section>
 
@@ -143,7 +134,18 @@
                 <div class="editor-grid">
                   <label class="field-card">
                     <span>Platform</span>
-                    <input id="field-platform" name="platform" type="text" placeholder="linkedin">
+                    <select id="field-platform" name="platform">
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="twitter">Twitter/X</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="reddit">Reddit</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="discord">Discord</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="custom">Custom</option>
+                    </select>
                   </label>
                   <label class="field-card">
                     <span>Author Name</span>
@@ -158,12 +160,12 @@
                     <input id="field-title" name="title" type="text" placeholder="Post title or topic">
                   </label>
                   <label class="field-card wide">
-                    <span>Summary</span>
-                    <textarea id="field-summary" name="summary" rows="3" placeholder="Concise summary"></textarea>
-                  </label>
-                  <label class="field-card wide">
                     <span>Content</span>
                     <textarea id="field-content" name="content" rows="6" placeholder="Extracted post content"></textarea>
+                  </label>
+                  <label class="field-card wide">
+                    <span>Summary</span>
+                    <textarea id="field-summary" name="summary" rows="3" placeholder="Concise summary"></textarea>
                   </label>
                 </div>
               </section>
@@ -190,10 +192,26 @@
                       <button type="button" class="chip" data-platform="youtube" role="radio" aria-checked="false">YouTube</button>
                       <button type="button" class="chip" data-platform="reddit" role="radio" aria-checked="false">Reddit</button>
                       <button type="button" class="chip" data-platform="facebook" role="radio" aria-checked="false">Facebook</button>
-                      <button type="button" class="chip" data-platform="producthunt" role="radio" aria-checked="false">ProductHunt</button>
-                      <button type="button" class="chip" data-platform="hackernews" role="radio" aria-checked="false">HackerNews</button>
+                      <button type="button" class="chip" data-platform="discord" role="radio" aria-checked="false">Discord</button>
+                      <button type="button" class="chip" data-platform="whatsapp" role="radio" aria-checked="false">WhatsApp</button>
+                      <button type="button" class="chip" data-platform="tiktok" role="radio" aria-checked="false">TikTok</button>
                       <button type="button" class="chip" data-platform="custom" role="radio" aria-checked="false">Custom</button>
                     </div>
+                  </div>
+
+                  <div class="setting-block wide conversation-context" id="conversation-context-block" hidden>
+                    <div class="setting-title-row">
+                      <h4>Conversation Context</h4>
+                    </div>
+                    <label class="field-label" for="previous-messages">Previous Messages</label>
+                    <textarea id="previous-messages" rows="5" placeholder="User A:
+How's the project going?
+
+User B:
+Still fixing deployment issues.
+
+User A:
+Any ETA?"></textarea>
                   </div>
 
                   <div class="setting-block">

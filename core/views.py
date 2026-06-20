@@ -47,8 +47,9 @@ PLATFORM_TEMPLATES = [
     "youtube",
     "reddit",
     "facebook",
-    "producthunt",
-    "hackernews",
+    "discord",
+    "whatsapp",
+    "tiktok",
     "custom",
 ]
 
@@ -122,6 +123,7 @@ def validate_url(url: str) -> None:
 def build_platform_data(req: ReplyRequest) -> Dict[str, Any]:
     return {
         "platform": req.platform,
+        "url": req.url,
         "title": req.title,
         "content": req.content,
         "summary": req.summary,
@@ -254,7 +256,7 @@ class ExtractContentView(View):
                 )
                 logger.warning("[EXTRACT][STEP 2] ReplyRequest created request_id=%s", req.id)
 
-                extraction_service.extract_and_save(req)
+                req = extraction_service.extract_and_save(req)
 
             # ===================================================
             # Screenshot
@@ -291,7 +293,7 @@ class ExtractContentView(View):
                 )
                 logger.warning("[EXTRACT][STEP 2] ReplyRequest created request_id=%s", req.id)
 
-                extraction_service.ocr_extractor.extract_and_save(
+                req = extraction_service.ocr_extractor.extract_and_save(
                     req,
                     image_source=temp_file_path,
                 )
@@ -425,6 +427,26 @@ class GenerateReplyView(View):
                         data.get(field),
                     )
 
+            previous_messages = (
+                data.get("previous_messages", "")
+                .strip()
+            )
+            conversation_platform = (
+                data.get("selected_template")
+                or data.get("platform")
+                or req.platform
+                or ""
+            ).strip().lower()
+            if previous_messages and conversation_platform in {"discord", "whatsapp"}:
+                req.conversation_summary = previous_messages
+                req.latest_message = req.content or data.get("post_content", "") or req.latest_message
+                req.conversation_history = [
+                    {
+                        "role": "previous_messages",
+                        "message": previous_messages,
+                    }
+                ]
+
             selected_template = (
                 data.get(
                     "selected_template",
@@ -476,9 +498,9 @@ class GenerateReplyView(View):
             return success_response(
                 {
                     "request_id": req.id,
-                    "professional_reply": req.professional_reply,
-                    "friendly_reply": req.friendly_reply,
-                    "engaging_reply": req.engaging_reply,
+                    "variation_1": req.professional_reply,
+                    "variation_2": req.friendly_reply,
+                    "variation_3": req.engaging_reply,
                 }
             )
 

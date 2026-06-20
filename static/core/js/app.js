@@ -8,8 +8,22 @@
     selectedPlatform: "linkedin",
     replyStyle: "professional",
     replyLength: "medium",
+    postUrl: "",
     isBusy: false
   };
+
+  var supportedPlatforms = [
+    "linkedin",
+    "twitter",
+    "instagram",
+    "youtube",
+    "reddit",
+    "facebook",
+    "discord",
+    "whatsapp",
+    "tiktok",
+    "custom"
+  ];
 
   var platformDefaults = {
     linkedin: { style: "professional", length: "medium", emoji: 20, creativity: 45 },
@@ -18,8 +32,9 @@
     youtube: { style: "engaging", length: "medium", emoji: 55, creativity: 60 },
     reddit: { style: "friendly", length: "medium", emoji: 15, creativity: 65 },
     facebook: { style: "friendly", length: "medium", emoji: 45, creativity: 55 },
-    producthunt: { style: "professional", length: "medium", emoji: 25, creativity: 60 },
-    hackernews: { style: "professional", length: "short", emoji: 5, creativity: 45 },
+    discord: { style: "friendly", length: "short", emoji: 50, creativity: 60 },
+    whatsapp: { style: "friendly", length: "short", emoji: 60, creativity: 30 },
+    tiktok: { style: "engaging", length: "short", emoji: 60, creativity: 80 },
     custom: { style: "professional", length: "medium", emoji: 35, creativity: 58 }
   };
 
@@ -29,7 +44,6 @@
     cacheElements();
     bindEvents();
     updateSliders();
-    updateManualCounter();
     autosizeTextareas();
   });
 
@@ -47,9 +61,6 @@
     els.previewImage = document.getElementById("preview-image");
     els.removeImageBtn = document.getElementById("remove-image-btn");
     els.extractImageBtn = document.getElementById("extract-image-btn");
-    els.manualContent = document.getElementById("manual-content");
-    els.manualCounter = document.getElementById("manual-counter");
-    els.manualContinueBtn = document.getElementById("manual-continue-btn");
     els.editorPanel = document.getElementById("editor-panel");
     els.settingsPanel = document.getElementById("settings-panel");
     els.resultsSection = document.getElementById("results-section");
@@ -57,6 +68,8 @@
     els.skeletonGrid = document.getElementById("skeleton-grid");
     els.generateBtn = document.getElementById("generate-btn");
     els.platformField = document.getElementById("field-platform");
+    els.conversationContextBlock = document.getElementById("conversation-context-block");
+    els.previousMessagesField = document.getElementById("previous-messages");
     els.authorNameField = document.getElementById("field-author-name");
     els.authorUsernameField = document.getElementById("field-author-username");
     els.titleField = document.getElementById("field-title");
@@ -81,7 +94,6 @@
 
     els.extractUrlBtn.addEventListener("click", extractFromUrl);
     els.extractImageBtn.addEventListener("click", extractFromScreenshot);
-    els.manualContinueBtn.addEventListener("click", continueWithManualContent);
     els.form.addEventListener("submit", generateReplies);
 
     els.uploadZone.addEventListener("click", function () {
@@ -112,11 +124,6 @@
 
     els.removeImageBtn.addEventListener("click", function () {
       setScreenshotFile(null);
-    });
-
-    els.manualContent.addEventListener("input", function () {
-      updateManualCounter();
-      autosize(els.manualContent);
     });
 
     Array.prototype.slice.call(document.querySelectorAll("textarea")).forEach(function (textarea) {
@@ -192,11 +199,6 @@
     els.imagePreview.hidden = false;
   }
 
-  function updateManualCounter() {
-    var count = els.manualContent.value.length;
-    els.manualCounter.textContent = count + " character" + (count === 1 ? "" : "s");
-  }
-
   function autosizeTextareas() {
     Array.prototype.slice.call(document.querySelectorAll("textarea")).forEach(autosize);
   }
@@ -229,9 +231,29 @@
       button.classList.toggle("is-selected", selected);
       button.setAttribute("aria-checked", String(selected));
     });
+    updateConversationContextVisibility(platform);
+    updateEditorVisibility();
     if (applyDefaults) {
       applyPlatformDefaults(platform);
     }
+  }
+
+  function isConversationPlatform(platform) {
+    return platform === "discord" || platform === "whatsapp";
+  }
+
+  function updateConversationContextVisibility(platform) {
+    var shouldShow = isConversationPlatform(platform);
+    els.conversationContextBlock.hidden = !shouldShow;
+    if (!shouldShow) {
+      els.previousMessagesField.value = "";
+    }
+  }
+
+  function updateEditorVisibility() {
+    var shouldHideEditor = isConversationPlatform(state.selectedPlatform);
+    els.editorPanel.hidden = shouldHideEditor;
+    els.editorPanel.classList.toggle("is-visible", !shouldHideEditor);
   }
 
   function applyPlatformDefaults(platform) {
@@ -254,10 +276,9 @@
   }
 
   function showWorkspace() {
-    els.editorPanel.hidden = false;
     els.settingsPanel.hidden = false;
-    els.editorPanel.classList.add("is-visible");
     els.settingsPanel.classList.add("is-visible");
+    updateEditorVisibility();
     setProgress("edit");
     setStatus("Context ready");
     window.requestAnimationFrame(function () {
@@ -279,6 +300,7 @@
       els.urlInput.focus();
       return;
     }
+    state.postUrl = url;
 
     await withButtonLoading(els.extractUrlBtn, async function () {
       setStatus("Extracting URL");
@@ -325,31 +347,11 @@
     });
   }
 
-  function continueWithManualContent() {
-    var content = els.manualContent.value.trim();
-    if (!content) {
-      showToast("Paste content before continuing.", true);
-      els.manualContent.focus();
-      return;
-    }
-
-    state.requestId = null;
-    fillEditor({
-      platform: state.selectedPlatform,
-      title: "",
-      content: content,
-      summary: "",
-      author_name: "",
-      author_username: ""
-    });
-    showWorkspace();
-    showToast("Manual content is ready for settings.");
-  }
-
   function applyExtraction(response) {
     console.log("[EXTRACT][FRONTEND] Raw /api/extract/ response", response);
     state.requestId = response.request_id || null;
     var data = response.platform_present_data || response.platform_present || response.platform_data || response.data || {};
+    state.postUrl = data.url || state.postUrl || "";
     console.log("[EXTRACT][FRONTEND] Data object selected for form mapping", data);
     if (data.platform) {
       state.selectedPlatform = normalizePlatform(data.platform);
@@ -382,9 +384,8 @@
     event.preventDefault();
 
     var content = els.contentField.value.trim();
-    var manualContent = els.manualContent.value.trim();
-    if (!content && !manualContent) {
-      showToast("Add or extract content before generating.", true);
+    if (!content) {
+      showToast("Extract content before generating.", true);
       return;
     }
 
@@ -403,10 +404,14 @@
       creativity_level: Number(els.creativitySlider.value)
     };
 
+    if (state.selectedPlatform === "discord" || state.selectedPlatform === "whatsapp") {
+      payload.previous_messages = els.previousMessagesField.value.trim();
+    }
+
     if (state.requestId) {
       payload.request_id = state.requestId;
     } else {
-      payload.post_content = content || manualContent;
+      payload.post_content = content;
     }
 
     await withButtonLoading(els.generateBtn, async function () {
@@ -432,16 +437,16 @@
   function renderResults(response) {
     var replies = [
       {
-        title: "Professional Reply",
-        text: response.professional_reply || ""
+        title: "Variation 1",
+        text: response.variation_1 || ""
       },
       {
-        title: "Friendly Reply",
-        text: response.friendly_reply || ""
+        title: "Variation 2",
+        text: response.variation_2 || ""
       },
       {
-        title: "Engaging Reply",
-        text: response.engaging_reply || response.high_engagement_reply || ""
+        title: "Variation 3",
+        text: response.variation_3 || ""
       }
     ];
 
@@ -465,17 +470,21 @@
     els.resultsGrid.querySelectorAll("[data-copy-index]").forEach(function (button) {
       button.addEventListener("click", function () {
         var reply = replies[Number(button.dataset.copyIndex)].text || "";
-        copyReply(button, reply);
+        copyReply(button, reply, state.postUrl);
       });
     });
     els.resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  async function copyReply(button, text) {
+  async function copyReply(button, text, postUrl) {
     try {
       await navigator.clipboard.writeText(text);
       button.textContent = "Copied";
       button.classList.add("is-copied");
+      showToast("Reply copied.");
+      if (postUrl) {
+        window.open(postUrl, "_blank");
+      }
       window.setTimeout(function () {
         button.textContent = "Copy";
         button.classList.remove("is-copied");
@@ -561,10 +570,10 @@
     var normalized = String(value || "custom").trim().toLowerCase();
     var map = {
       x: "twitter",
-      product_hunt: "producthunt",
-      hacker_news: "hackernews"
+      "twitter/x": "twitter"
     };
-    return map[normalized] || normalized;
+    normalized = map[normalized] || normalized;
+    return supportedPlatforms.indexOf(normalized) === -1 ? "custom" : normalized;
   }
 
   function countWords(text) {

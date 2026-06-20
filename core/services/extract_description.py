@@ -390,6 +390,44 @@ class URLContentExtractor:
 
     # ---- platform parsers, all operating on cleaned_html only ----------
 
+    def _iter_json_ld_objects(self, soup: BeautifulSoup):
+        for tag in soup.find_all("script", attrs={"type": "application/ld+json"}):
+            raw = tag.string or tag.get_text("", strip=True)
+            if not raw:
+                continue
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                logger.warning("[EXTRACT][YOUTUBE] Skipping invalid JSON-LD block length=%s", len(raw))
+                continue
+            stack = payload if isinstance(payload, list) else [payload]
+            while stack:
+                item = stack.pop(0)
+                if not isinstance(item, dict):
+                    continue
+                yield item
+                graph = item.get("@graph")
+                if isinstance(graph, list):
+                    stack.extend(graph)
+
+    def _json_ld_type_matches(self, obj: Dict[str, Any], expected_type: str) -> bool:
+        obj_type = obj.get("@type")
+        if isinstance(obj_type, list):
+            return expected_type in obj_type
+        return str(obj_type) == expected_type
+
+    def _author_name_from_json_ld(self, author: Any) -> str:
+        if isinstance(author, dict):
+            return str(author.get("name", "") or "").strip()
+        if isinstance(author, list):
+            for item in author:
+                name = self._author_name_from_json_ld(item)
+                if name:
+                    return name
+        if isinstance(author, str):
+            return author.strip()
+        return ""
+
     def _parse_twitter(self, html: str) -> Dict[str, Any]:
         soup = BeautifulSoup(html, "html.parser")
         article = soup.find("article")
@@ -486,34 +524,155 @@ class URLContentExtractor:
         data: Dict[str, Any] = {}
 
         obj = None
-        for tag in soup.find_all("script", attrs={"type": "application/ld+json"}):
-            if tag.string and '"VideoObject"' in tag.string:
-                try:
-                    obj = json.loads(tag.string)
-                except json.JSONDecodeError:
-                    obj = None
+        for candidate in self._iter_json_ld_objects(soup):
+            if self._json_ld_type_matches(candidate, "VideoObject"):
+                obj = candidate
                 break
-        if not obj:
-            return data
+        if obj:
+            data["title"] = obj.get("name", "")
+            data["content"] = obj.get("description", "")
+            data["summary"] = obj.get("description", "")
+            data["author_name"] = self._author_name_from_json_ld(obj.get("author"))
+            thumbs = obj.get("thumbnailUrl") or obj.get("thumbnail") or []
+            if isinstance(thumbs, str):
+                thumbs = [thumbs]
+            if thumbs:
+                data["image_url"] = thumbs[0].get("url", "") if isinstance(thumbs[0], dict) else thumbs[0]
 
-        data["title"] = obj.get("name", "")
-        data["content"] = obj.get("description", "")
-        data["summary"] = obj.get("description", "")
-        data["author_name"] = obj.get("author", "")
-        thumbs = obj.get("thumbnailUrl") or []
-        if thumbs:
-            data["image_url"] = thumbs[0]
+            for stat in obj.get("interactionStatistic", []) or []:
+                itype = stat.get("interactionType", "")
+                count = _parse_count(stat.get("userInteractionCount"))
+                if itype.endswith("WatchAction"):
+                    data["views"] = count
+                elif itype.endswith("LikeAction"):
+                    data["likes"] = count
+                elif itype.endswith("CommentAction"):
+                    data["comments"] = count
 
-        for stat in obj.get("interactionStatistic", []) or []:
-            itype = stat.get("interactionType", "")
-            count = _parse_count(stat.get("userInteractionCount"))
-            if itype.endswith("WatchAction"):
-                data["views"] = count
-            elif itype.endswith("LikeAction"):
-                data["likes"] = count
-            elif itype.endswith("CommentAction"):
-                data["comments"] = count
+        if not data.get("title"):
+            title_el = (
+                soup.find("h1")
+                or soup.find(id="title")
+                or soup.find("yt-formatted-string", id="title")
+                or soup.find("meta", attrs={"itemprop": "name"})
+            )
+            if title_el:
+                data["title"] = title_el.get("content", "") or title_el.get_text(" ", strip=True)
 
+        if not data.get("content"):
+            description_el = (
+                soup.find(id="description")
+                or soup.find("yt-formatted-string", id="description")
+                or soup.find("meta", attrs={"itemprop": "description"})
+            )
+            if description_el:
+                data["content"] = description_el.get("content", "") or description_el.get_text("\n", strip=True)
+
+        if not data.get("summary") and data.get("content"):
+            data["summary"] = data["content"]
+
+        if not data.get("author_name"):
+            owner_el = (
+                soup.find(id="owner-name")
+                or soup.find("ytd-channel-name")
+                or soup.find("link", attrs={"itemprop": "name"})
+            )
+            if owner_el:
+                data["author_name"] = owner_el.get("content", "") or owner_el.get_text(" ", strip=True)
+
+        logger.warning(
+            "[EXTRACT][YOUTUBE] Parsed cleanedHtml fields has_json_ld=%s title=%r content_length=%s summary_length=%s author_name=%r",
+            bool(obj),
+            data.get("title", ""),
+            len(data.get("content", "") or ""),
+            len(data.get("summary", "") or ""),
+            data.get("author_name", ""),
+        )
+
+        return data
+
+    def _parse_instagram(self, html: str) -> Dict[str, Any]:
+        """
+        Instagram's logged-out SSR page stores post data inside application/json
+        script payloads rather than in simple article/body markup. Pull the first
+        media-shaped object with a caption from those payloads.
+        """
+        soup = BeautifulSoup(html, "html.parser")
+        data: Dict[str, Any] = {}
+        media_obj: Optional[Dict[str, Any]] = None
+
+        def walk(value: Any):
+            if isinstance(value, dict):
+                yield value
+                for child in value.values():
+                    yield from walk(child)
+            elif isinstance(value, list):
+                for child in value:
+                    yield from walk(child)
+
+        for tag in soup.find_all("script", attrs={"type": "application/json"}):
+            raw = tag.string or tag.get_text("", strip=True)
+            if not raw or "caption" not in raw:
+                continue
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+
+            for obj in walk(payload):
+                caption = obj.get("caption")
+                caption_text = ""
+                if isinstance(caption, dict):
+                    caption_text = str(caption.get("text", "") or "").strip()
+                elif isinstance(caption, str):
+                    caption_text = caption.strip()
+
+                if caption_text and (
+                    obj.get("code")
+                    or obj.get("shortcode")
+                    or obj.get("media_type")
+                    or obj.get("__typename", "").startswith("XIGPolaris")
+                ):
+                    media_obj = obj
+                    break
+
+            if media_obj:
+                break
+
+        if media_obj:
+            caption = media_obj.get("caption")
+            if isinstance(caption, dict):
+                data["content"] = str(caption.get("text", "") or "").strip()
+            elif isinstance(caption, str):
+                data["content"] = caption.strip()
+
+            data["summary"] = data.get("content", "")
+            data["title"] = (data.get("content") or "")[:80]
+
+            user = media_obj.get("user") or {}
+            if isinstance(user, dict):
+                data["author_username"] = str(user.get("username", "") or "").strip().lstrip("@")
+                data["author_name"] = str(user.get("full_name", "") or "").strip() or data["author_username"]
+
+            data["likes"] = _parse_count(media_obj.get("like_count"))
+            data["comments"] = _parse_count(media_obj.get("comment_count"))
+            data["image_url"] = media_obj.get("display_uri", "") or ""
+
+        if not data.get("content"):
+            body_text = soup.get_text("\n", strip=True)
+            data["content"] = body_text
+            data["summary"] = body_text
+            data["title"] = body_text[:80]
+
+        logger.warning(
+            "[EXTRACT][INSTAGRAM] Parsed cleanedHtml fields title=%r content_length=%s author_name=%r author_username=%r likes=%r comments=%r",
+            data.get("title", ""),
+            len(data.get("content", "") or ""),
+            data.get("author_name", ""),
+            data.get("author_username", ""),
+            data.get("likes", 0),
+            data.get("comments", 0),
+        )
         return data
 
     def _parse_generic(self, html: str) -> Dict[str, Any]:
@@ -526,15 +685,7 @@ class URLContentExtractor:
         soup = BeautifulSoup(html, "html.parser")
         data: Dict[str, Any] = {}
 
-        for tag in soup.find_all("script", attrs={"type": "application/ld+json"}):
-            if not tag.string:
-                continue
-            try:
-                obj = json.loads(tag.string)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(obj, list):
-                obj = next((o for o in obj if isinstance(o, dict)), {})
+        for obj in self._iter_json_ld_objects(soup):
             obj_type = str(obj.get("@type", "")) if isinstance(obj, dict) else ""
             if obj_type in ("Article", "NewsArticle", "BlogPosting"):
                 data["title"] = obj.get("headline", "") or data.get("title", "")
@@ -580,10 +731,7 @@ class URLContentExtractor:
         elif platform == "youtube":
             parsed = self._parse_youtube(html)
         elif platform == "instagram":
-            # Instagram's public DOM is close enough to Twitter's caption
-            # layout for the same dir="auto" text-block heuristic to work;
-            # if it doesn't find anything it just returns an empty dict.
-            parsed = self._parse_twitter(html)
+            parsed = self._parse_instagram(html)
         else:
             parsed = self._parse_generic(html)
 

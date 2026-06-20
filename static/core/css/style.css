@@ -43,6 +43,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -420,12 +421,19 @@ h1 {
 .segmented-control,
 .mini-segments {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   padding: 4px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(0, 0, 0, 0.24);
+}
+
+.segmented-control {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.mini-segments {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .segment,
@@ -493,6 +501,7 @@ h1 {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--border);
@@ -508,6 +517,20 @@ input {
   padding: 0 15px;
 }
 
+select {
+  min-height: 52px;
+  padding: 0 42px 0 15px;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) 50%,
+    calc(100% - 14px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
 textarea {
   min-height: 132px;
   resize: none;
@@ -515,6 +538,7 @@ textarea {
 }
 
 input:focus,
+select:focus,
 textarea:focus {
   border-color: rgba(99, 102, 241, 0.7);
   background: rgba(0, 0, 0, 0.34);
@@ -666,6 +690,7 @@ textarea::placeholder {
 }
 
 .field-card input,
+.field-card select,
 .field-card textarea {
   border-radius: 12px;
 }
@@ -790,11 +815,20 @@ textarea::placeholder {
   display: none;
 }
 
+.skeleton-grid[hidden],
+.results-grid[hidden] {
+  display: none;
+}
+
 .result-card {
   display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 260px;
   gap: 16px;
-  padding: 4px 0 18px;
-  border-bottom: 1px solid var(--border);
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.035);
   animation: slideUp 420ms var(--ease) both;
 }
 
@@ -806,13 +840,9 @@ textarea::placeholder {
   animation-delay: 120ms;
 }
 
-.result-card:last-child {
-  border-bottom: 0;
-}
-
 .result-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
@@ -820,9 +850,11 @@ textarea::placeholder {
 .result-header h4 {
   margin: 0;
   font-size: 1rem;
+  line-height: 1.25;
 }
 
 .copy-button {
+  flex: 0 0 auto;
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--border);
@@ -844,10 +876,13 @@ textarea::placeholder {
 .reply-text {
   margin: 0;
   color: rgba(250, 250, 250, 0.9);
+  font-size: 0.96rem;
+  line-height: 1.62;
   white-space: pre-wrap;
 }
 
 .word-count {
+  align-self: end;
   color: var(--muted-2);
   font-size: 0.8rem;
   font-weight: 720;
@@ -983,6 +1018,16 @@ textarea::placeholder {
   .results-grid,
   .skeleton-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .result-card {
+    min-height: 220px;
+  }
+
+  .result-header {
+    align-items: center;
   }
 }
 

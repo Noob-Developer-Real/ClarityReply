@@ -4,10 +4,9 @@ services/clarity_reply.py
 
 ClarityReply generation service — Gemini 2.5 Flash edition.
 
-Takes a `ReplyRequest` Django model instance, builds a context-rich prompt
-from its fields, calls Gemini, and saves the three generated replies
-(professional_reply, friendly_reply, engaging_reply) directly back onto
-the model instance.
+Takes a `ReplyRequest` Django model instance, builds a focused reply prompt
+from its fields, calls Gemini, and saves three alternate phrasings directly
+back onto the model instance.
 
 Install:
 --------
@@ -27,9 +26,9 @@ Usage:
     service = ClarityReplyService()
     service.generate_and_save(req)
 
-    print(req.professional_reply)
-    print(req.friendly_reply)
-    print(req.engaging_reply)
+    print(req.professional_reply)  # variation_1
+    print(req.friendly_reply)      # variation_2
+    print(req.engaging_reply)      # variation_3
 """
 
 from __future__ import annotations
@@ -64,7 +63,11 @@ PLATFORM_RULES: Dict[str, str] = {
     "discord": "Casual, friendly, natural conversation style.",
     "whatsapp": "Human, personal, context-aware.",
     "youtube": "Supportive, engagement-focused. Encourage discussion.",
-    "instagram": "Short, friendly, emoji-friendly.",
+    "instagram": (
+        "Short, human, conversational, and native to Instagram. Use natural emoji "
+        "placement when it fits. Avoid corporate language, LinkedIn-style phrasing, "
+        "generic praise, and AI-sounding comments."
+    ),
 }
 
 
@@ -108,13 +111,11 @@ def _length_label(length: str) -> str:
 
 class ClarityReplyService:
     """
-    Generates platform-aware, persona-aware replies for a ReplyRequest
-    instance using Gemini 2.5 Flash, and persists them to the model.
+    Generates platform-aware alternate phrasings for a ReplyRequest instance
+    using Gemini 2.5 Flash, and persists them to the model.
     """
 
-    REQUIRED_TOP_KEYS = {"analysis", "replies"}
-    REQUIRED_ANALYSIS_KEYS = {"platform", "topic", "post_type", "emotion", "reply_strategy"}
-    REQUIRED_REPLY_KEYS = {"professional_reply", "friendly_reply", "high_engagement_reply"}
+    REQUIRED_REPLY_KEYS = {"variation_1", "variation_2", "variation_3"}
 
     def __init__(self, api_key: str | None = None, model: str | None = None):
         self.api_key = api_key or getattr(settings, "GEMINI_API_KEY", None)
@@ -131,20 +132,25 @@ class ClarityReplyService:
 
     def _build_system_prompt(self) -> str:
         return (
-            "You are ClarityReply, an expert AI reply generation engine.\n"
-            "Your job is to generate highly contextual, human-like replies "
-            "optimized for the specific platform and conversation context.\n\n"
-            "Rules:\n"
-            "- Sound human, never generic or robotic.\n"
-            "- Match the platform's norms exactly.\n"
-            "- Match the detected sentiment, emotion, and formality level.\n"
-            "- Match the requested style, length, emoji level, and creativity level.\n"
-            "- Be contextually relevant to the actual content and latest message.\n"
-            "- Avoid generic AI wording (no 'great post!', 'I couldn't agree more', "
-            "etc. unless genuinely earned by context).\n"
-            "- Return ONLY valid JSON matching the exact schema given. No markdown "
-            "fences, no commentary, no preamble."
+            "You generate short, context-aware social replies.\n"
+            "Only generate replies. Do not analyze, explain, summarize, or add meta commentary.\n"
+            "Return ONLY valid JSON with exactly these keys: variation_1, variation_2, variation_3."
         )
+
+    def _combined_context(self, req: ReplyRequest) -> str:
+        content = req.content or req.ocr_text or ""
+        platform = (req.platform or "").strip().lower()
+        if platform not in {"discord", "whatsapp"}:
+            return content
+
+        pieces = []
+        if req.conversation_summary:
+            pieces.append(f"Previous messages:\n{req.conversation_summary}")
+        if req.latest_message:
+            pieces.append(f"Latest message:\n{req.latest_message}")
+        if content:
+            pieces.append(f"Post content:\n{content}")
+        return "\n\n".join(pieces).strip()
 
     def _build_user_prompt(self, req: ReplyRequest) -> str:
         platform_rule = get_platform_rule(req.platform)
@@ -160,78 +166,46 @@ class ClarityReplyService:
             except (TypeError, ValueError):
                 history_str = str(req.conversation_history)
 
-        content_block = req.content or req.ocr_text or ""
+        content_block = self._combined_context(req)
 
         prompt = f"""
-Generate three reply variants for the following context.
+Generate three alternative phrasings of the same reply strategy.
 
-## Source
+All three variations must have the same goal, tone, platform style, and intent.
+Only change the wording.
+
 Platform: {req.platform}
-Source Type: {req.source_type}
-URL: {req.url or "N/A"}
-
-## Platform Rule
-{platform_rule}
-
-## Content
 Title: {req.title or "N/A"}
-Content: {content_block}
 Summary: {req.summary or "N/A"}
+Post Content:
+{content_block}
 
-## Author Context
-Name: {req.author_name or "N/A"}
-Username: {req.author_username or "N/A"}
-Role: {req.author_role or "N/A"}
-Company: {req.author_company or "N/A"}
-Headline: {req.author_headline or "N/A"}
-
-## Content Analysis
-Topic: {req.topic or "N/A"}
-Subtopic: {req.subtopic or "N/A"}
-Industry: {req.industry or "N/A"}
-Post Type: {req.post_type or "N/A"}
-Post Intent: {req.post_intent or "N/A"}
-Sentiment: {req.sentiment or "N/A"}
-Emotion: {req.emotion or "N/A"}
-Audience Type: {req.audience_type or "N/A"}
-Formality Level: {req.formality_level or "N/A"}
-
-## Engagement Signals
-Likes: {req.likes}  Comments: {req.comments}  Shares: {req.shares}
-
-## Conversation Context
 Conversation Summary: {req.conversation_summary or "N/A"}
 Conversation History: {history_str}
 Latest Message: {req.latest_message or "N/A"}
 
-## User Preferences
+Platform Style:
+{platform_rule}
+
 Reply Goal: {req.reply_goal}
-Reply Style: {req.reply_style}
+Desired Tone: {req.reply_style}
 Reply Length: {req.reply_length} ({length_guide})
 Emoji Level: {req.emoji_level}/100 -> {emoji_guide}
 Creativity Level: {req.creativity_level}/100 -> {creativity_guide}
 
-## Output Requirements
-Generate exactly three replies:
-1. professional_reply - polished, credible, respectful of platform norms
-2. friendly_reply - warm, approachable, conversational
-3. high_engagement_reply - designed to maximize replies/likes/shares while staying authentic
+Instagram-specific rules when Platform is instagram:
+- Keep replies short and human.
+- Prefer conversational phrasing like a real Instagram comment.
+- Use emojis only where they feel natural.
+- Avoid corporate language, generic praise, and LinkedIn tone.
+- Do not write phrases like "Great insights. Thanks for sharing."
 
 Return ONLY this JSON structure, no markdown fences, no extra text:
 
 {{
-  "analysis": {{
-    "platform": "",
-    "topic": "",
-    "post_type": "",
-    "emotion": "",
-    "reply_strategy": ""
-  }},
-  "replies": {{
-    "professional_reply": "",
-    "friendly_reply": "",
-    "high_engagement_reply": ""
-  }}
+  "variation_1": "",
+  "variation_2": "",
+  "variation_3": ""
 }}
 """.strip()
         return prompt
@@ -254,15 +228,9 @@ Return ONLY this JSON structure, no markdown fences, no extra text:
         raise ValueError("Model did not return valid JSON:\n" + text)
 
     def _validate(self, data: Dict[str, Any]) -> None:
-        if self.REQUIRED_TOP_KEYS - data.keys():
-            raise ValueError(f"Missing top-level keys: {self.REQUIRED_TOP_KEYS - data.keys()}")
-        if self.REQUIRED_ANALYSIS_KEYS - data["analysis"].keys():
+        if self.REQUIRED_REPLY_KEYS - data.keys():
             raise ValueError(
-                f"Missing analysis keys: {self.REQUIRED_ANALYSIS_KEYS - data['analysis'].keys()}"
-            )
-        if self.REQUIRED_REPLY_KEYS - data["replies"].keys():
-            raise ValueError(
-                f"Missing reply keys: {self.REQUIRED_REPLY_KEYS - data['replies'].keys()}"
+                f"Missing reply keys: {self.REQUIRED_REPLY_KEYS - data.keys()}"
             )
 
     # ---------------------------------------------------------------
@@ -299,14 +267,13 @@ Return ONLY this JSON structure, no markdown fences, no extra text:
     def generate_and_save(self, req: ReplyRequest, retries: int = 2) -> ReplyRequest:
         """
         Generate replies and persist them onto the ReplyRequest instance:
-        professional_reply, friendly_reply, engaging_reply. Saves and
-        returns the updated instance.
+        professional_reply, friendly_reply, engaging_reply. These existing
+        fields store variation_1, variation_2, variation_3 respectively.
         """
         data = self.generate(req, retries=retries)
-        replies = data["replies"]
 
-        req.professional_reply = replies["professional_reply"]
-        req.friendly_reply = replies["friendly_reply"]
-        req.engaging_reply = replies["high_engagement_reply"]
+        req.professional_reply = data["variation_1"]
+        req.friendly_reply = data["variation_2"]
+        req.engaging_reply = data["variation_3"]
         req.save(update_fields=["professional_reply", "friendly_reply", "engaging_reply", "updated_at"])
         return req
