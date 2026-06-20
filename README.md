@@ -1,54 +1,167 @@
 # ClarityReply
 
-[Add project summary]
+Built by **Tejasvi Bajaj** for **Anakin Blitz**, a **6-hour hackathon**.
+
+ClarityReply is a Django-based AI reply workspace that extracts social post context from URLs or screenshots and generates platform-aware reply variations. It is designed for people who need to respond quickly across social platforms without sounding generic, robotic, or out of place.
 
 ## Badges
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.x-092E20?style=for-the-badge&logo=django&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![License](https://img.shields.io/badge/License-[Add%20license]-lightgrey?style=for-the-badge)
+![Anakin Blitz](https://img.shields.io/badge/Anakin%20Blitz-6%20Hour%20Hackathon-7C3AED?style=for-the-badge)
 
-## Demo
+## Problem Statement
 
-- Deployment: [Add deployment URL]
-- Demo video: [Add demo video]
-- Screenshots: [Add screenshots]
+Writing good replies across platforms is harder than it looks.
+
+A reply that works on LinkedIn sounds too formal for Instagram. A reply that works in WhatsApp or Discord needs conversation history. A YouTube comment should feel supportive and discussion-friendly. Most AI-generated replies ignore these platform norms and produce generic responses like “Great insights, thanks for sharing.”
+
+The core problem:
+
+> How can a user quickly extract context from a social post and generate human, platform-native reply variations without manually copying, cleaning, and re-prompting content?
+
+## Solution
+
+ClarityReply provides a simple workflow:
+
+1. Paste a social post URL or upload a screenshot.
+2. Extract structured context such as platform, title, content, summary, author, and engagement signals.
+3. Review or adjust extracted data when relevant.
+4. Generate three alternate phrasings of the same reply strategy.
+5. Copy a reply and optionally open the original post URL.
+
+The product focuses on **reply generation only**. It avoids long analysis, meta commentary, and personality-split outputs. Instead of “Professional / Friendly / Engaging” replies, it returns:
+
+```json
+{
+  "variation_1": "",
+  "variation_2": "",
+  "variation_3": ""
+}
+```
 
 ## Features
 
-- URL-based social post extraction
-- Screenshot-based content extraction
-- Editable platform data before reply generation
-- Platform-aware reply generation
-- Discord and WhatsApp conversation context support
-- Copy-to-reply workflow
-- Mobile-responsive generated reply cards
+- URL extraction through Anakin URL Scraper.
+- Screenshot OCR through Gemini vision.
+- Platform detection for LinkedIn, Twitter/X, Instagram, YouTube, Reddit, Facebook, TikTok, Discord, WhatsApp, and Custom.
+- Dedicated parsing improvements for YouTube and Instagram.
+- Platform-native prompt rules, especially for Instagram.
+- Discord and WhatsApp conversation context support.
+- Generated reply cards with copy buttons and word counts.
+- Django admin dashboard for inspecting extraction and generation data.
+- No database schema changes required beyond the existing `ReplyRequest` model.
 
 ## Architecture
 
-[Add architecture diagram]
-
-High-level flow:
-
 ```text
-Frontend
-  -> Django views
-  -> Extraction service
-  -> ReplyRequest persistence
-  -> Reply generation service
-  -> JSON response
-  -> Frontend rendering
+User
+  |
+  v
+Frontend UI
+  |
+  |-- URL extraction request
+  |-- Screenshot extraction request
+  |-- Reply generation request
+  v
+Django Views
+  |
+  |-- ExtractContentView
+  |-- GenerateReplyView
+  v
+Services
+  |
+  |-- ContentExtractionService
+  |     |-- Anakin URL Scraper
+  |     |-- Gemini OCR
+  |
+  |-- ClarityReplyService
+        |-- Gemini reply generation
+  |
+  v
+ReplyRequest model
+  |
+  v
+JSON response back to frontend
 ```
+
+See the full hackathon write-up in [docs/anakin-blitz-submission.md](docs/anakin-blitz-submission.md).
 
 ## Tech Stack
 
-- Backend: Django
-- Frontend: HTML, CSS, JavaScript
-- Database: [Add database]
-- AI: Google Gemini via `google-genai`
-- URL extraction: Anakin URL Scraper
-- Deployment: [Add deployment platform]
+- **Backend:** Django
+- **Frontend:** HTML, CSS, JavaScript
+- **Database:** SQLite for local development
+- **AI:** Google Gemini via `google-genai`
+- **URL Extraction:** Anakin URL Scraper
+- **Parsing:** BeautifulSoup, JSON-LD parsing, platform-specific extraction logic
+- **Admin:** Django Admin
+
+## Supported Platforms
+
+- LinkedIn
+- Twitter/X
+- Instagram
+- YouTube
+- Reddit
+- Facebook
+- Discord
+- WhatsApp
+- TikTok
+- Custom
+
+## API Flow
+
+### Extract Content
+
+```text
+POST /api/extract/
+```
+
+Inputs:
+
+- `source_type`: `url` or `screenshot`
+- `url`: required for URL extraction
+- `image`: required for screenshot extraction
+- `platform`: selected platform
+
+Returns:
+
+- `request_id`
+- `platform_data`
+- `platform`
+- `url`
+- `title`
+- `summary`
+- `content`
+- `author_name`
+- `author_username`
+- engagement fields where available
+
+### Generate Reply
+
+```text
+POST /api/generate-reply/
+```
+
+Inputs:
+
+- `request_id` or `post_content`
+- `platform`
+- editable extracted fields
+- reply preferences
+- optional `previous_messages` for Discord and WhatsApp
+
+Returns:
+
+```json
+{
+  "variation_1": "",
+  "variation_2": "",
+  "variation_3": ""
+}
+```
 
 ## Installation
 
@@ -62,7 +175,7 @@ pip install -r requirements.txt
 
 ## Environment Variables
 
-Create a local environment file or configure these variables in your shell/deployment platform:
+Create a `.env` file or configure these variables in your shell:
 
 ```bash
 SECRET_KEY="[Add Django secret key]"
@@ -88,72 +201,40 @@ Open:
 http://127.0.0.1:8000/
 ```
 
-Run checks/tests:
+Admin:
+
+```text
+http://127.0.0.1:8000/admin/
+```
+
+Run checks:
 
 ```bash
 python3 manage.py check
-python3 manage.py test
-```
-
-## API Flow
-
-### Extract Content
-
-```text
-POST /api/extract/
-```
-
-Inputs:
-
-- `source_type`: `url` or `screenshot`
-- `url`: required for URL extraction
-- `image`: required for screenshot extraction
-- `platform`: selected platform
-
-Returns:
-
-- `request_id`
-- `platform_data`
-- extracted fields such as `platform`, `title`, `summary`, `content`, `author_name`, and `author_username`
-
-### Generate Replies
-
-```text
-POST /api/generate-reply/
-```
-
-Inputs:
-
-- `request_id` or `post_content`
-- `platform`
-- editable extracted fields
-- reply settings
-- optional `previous_messages` for Discord and WhatsApp
-
-Returns:
-
-```json
-{
-  "variation_1": "",
-  "variation_2": "",
-  "variation_3": ""
-}
+python3 -m compileall core
 ```
 
 ## Screenshots
 
 [Add screenshots]
 
-## Roadmap
+## Demo
 
-- [Add roadmap item]
-- [Add roadmap item]
-- [Add roadmap item]
+- Demo video: [Add demo video]
+- Deployment URL: [Add deployment URL]
 
-## Contributing
+## Future Roadmap
 
-[Add contribution guidelines]
+- Browser extension for replying directly on social platforms.
+- More platform-specific parsers.
+- Saved reply history and favorites.
+- Team workspace support.
+- Better analytics for reply performance.
+- Deployment-ready production settings.
 
-## License
+## Author
 
-[Add license]
+**Tejasvi Bajaj**
+
+Built for **Anakin Blitz**, a **6-hour hackathon**.
+
