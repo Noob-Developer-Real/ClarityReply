@@ -1,6 +1,8 @@
 ![ClarityReply Banner](./images/banner.png)
 <div align="center">
+  
 # ClarityReply
+
 </div>
 Built by **Tejasvi Bajaj** for **Anakin Blitz**, a **6-hour hackathon**.
 
