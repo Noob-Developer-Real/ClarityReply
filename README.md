@@ -15,8 +15,8 @@ ClarityReply is a Django-based AI reply workspace that extracts social post cont
 ![Django](https://img.shields.io/badge/Django-5.x-092E20?style=for-the-badge&logo=django&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![Anakin Blitz](https://img.shields.io/badge/Anakin%20Blitz-6%20Hour%20Hackathon-7C3AED?style=for-the-badge)
-[![Watch Demo](https://img.shields.io/badge/▶%20Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)]([https://youtu.be/rgVUMTHk-vA](https://youtu.be/h6WDwGpDtp0?si=BuhNiZysEvRgAOTA))
-[![Twitter Post](https://img.shields.io/badge/View%20Twitter%20Post-000000?style=for-the-badge&logo=x&logoColor=white)]([https://x.com/i/status/2061200836987159025](https://x.com/i/status/2068350882811654201))
+[![Watch Demo](https://img.shields.io/badge/▶%20Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/h6WDwGpDtp0?si=BuhNiZysEvRgAOTA)
+[![Twitter Post](https://img.shields.io/badge/View%20Twitter%20Post-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/i/status/2068350882811654201)
 
 ## Problem Statement
 
